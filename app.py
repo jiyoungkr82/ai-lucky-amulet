@@ -100,4 +100,10 @@ if st.session_state.fortune_result:
                 )
                 st.balloons() # 축하 효과
             except Exception as e:
-                        st.error(f"부적 생성 중 오류가 발생했습니다: {e}")
+                        # st.error(f"부적 생성 중 오류가 발생했습니다: {e}")
+                        if "insufficient_quota" in str(e) or "rate_limit" in str(e):
+                            st.warning("🔮 오늘 준비된 행운 부적이 모두 소진되었습니다. 내일 다시 시도해 주세요!")
+                        else:
+                            # 그 외 일반적인 에러 발생 시
+                            st.error(f"부적 생성 중 잠시 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.")
+                            
