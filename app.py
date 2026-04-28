@@ -20,7 +20,7 @@ client = OpenAI(api_key=api_key)
 # 화면 넓게 설정
 st.set_page_config(layout="wide")
 
-def get_fortune_by_direct_url(zodiac_name):
+def get_fortune_by_direct_url(zodiac_name, target_index):
     
     query = f"{zodiac_name} 운세" # ex) 쥐띠%20운세 -> %20은 공백(space)을 뜻함.
     encoded_query = urllib.parse.quote(query)
@@ -37,10 +37,18 @@ def get_fortune_by_direct_url(zodiac_name):
         soup = BeautifulSoup(response.text, 'html.parser')
         logging.info(soup.get_text)
         
-        fortune_text = soup.select_one('p.text._cs_fortune_text')
+        # 공통 운세 내용 추출
+        fortune_text_el = soup.select_one('p.text._cs_fortune_text')
+        # 상세 항목 리스트 추출
+        fortune_detail_list = soup.select('dl.lst_infor._cs_fortune_list > div')
             
-        if fortune_text:
-            return fortune_text.get_text().strip()
+        if fortune_text_el and len(fortune_detail_list) > target_index:
+            common_text = fortune_text_el.get_text(strip=True)
+            # 인덱스에 해당하는 상세 운세(dd 태그) 가져오기
+            detail_text = fortune_detail_list[target_index].select_one('dd').get_text(strip=True)
+            
+            # 두 내용을 합쳐서 반환 (가독성을 위해 줄바꿈 추가)
+            return f"{common_text}\n\n[상세 운세]\n{detail_text}"
         else:
             logging.error(f"HTML 구조 변경 감지: {url}")
             return "운세 정보를 찾을 수 없습니다. (네이버 페이지 구조 변경 가능성)"
@@ -75,12 +83,37 @@ if 'current_zodiac' not in st.session_state:
 
 st.title("🧧 오늘의 운세&부적 생성기")
 
-zodiac_list = ['쥐띠', '소띠', '호랑이띠', '토끼띠', '용띠', '뱀띠', '말띠', '양띠', '원숭이띠', '닭띠', '개띠', '돼지띠']
-zodiac_name = st.selectbox("당신의 띠를 선택하세요. 해당 운세는 96, 84, 72, 60년생만 해당합니다.", zodiac_list)
+zodiac_ages = {
+    "쥐띠": [1996, 1984, 1972, 1960],
+    "소띠": [1997, 1985, 1973, 1961],
+    "호랑이띠": [1998, 1986, 1974, 1962],
+    "토끼띠": [1999, 1987, 1975, 1963],
+    "용띠": [1988, 1976, 1964, 1952],
+    "뱀띠": [1989, 1977, 1965, 1953],
+    "말띠": [1990, 1978, 1966, 1954],
+    "양띠": [1991, 1979, 1967, 1955],
+    "원숭이띠": [1992, 1980, 1968, 1956],
+    "닭띠": [1993, 1981, 1969, 1957],
+    "개띠": [1994, 1982, 1970, 1958],
+    "돼지띠": [1995, 1983, 1971, 1959]
+}
+
+zodiac_list = list(zodiac_ages.keys())
+zodiac_name = st.selectbox("당신의 띠를 선택하세요.", zodiac_list)
+
+age_list = zodiac_ages[zodiac_name]
+
+# 선택된 띠에 해당하는 연도들만 다시 선택박스로 제공
+selected_year = st.selectbox(
+    f"{zodiac_name}의 출생 연도를 선택하세요", 
+    age_list
+)
+
+target_index = age_list.index(selected_year)
 
 if st.button("운세 바로 가져오기"):
     with st.spinner(f'{zodiac_name} 운세를 찾는 중...'):
-        result = get_fortune_by_direct_url(zodiac_name)
+        result = get_fortune_by_direct_url(zodiac_name, target_index)
         st.session_state.fortune_result = result # 결과를 세션에 저장하여 기억함
         
 if st.session_state.fortune_result:
