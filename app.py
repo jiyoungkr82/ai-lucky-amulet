@@ -6,6 +6,9 @@ import streamlit as st
 import requests
 from bs4 import BeautifulSoup
 import urllib.parse
+import logging
+
+logging.basicConfig(level=logging.INFO, format='%(message)s')
 
 # .env 파일에 기록된 환경변수를 불러옵니다.
 load_dotenv()
@@ -25,21 +28,25 @@ def get_fortune_by_direct_url(zodiac_name):
     url = f"https://search.naver.com/search.naver?where=nexearch&sm=tab_etc&qvt=0&query={encoded_query}"
     
     headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+        "Referer": "https://www.naver.com"
     }
     
     try:
         response = requests.get(url, headers=headers)
         soup = BeautifulSoup(response.text, 'html.parser')
+        logging.info(soup.get_text)
         
         fortune_text = soup.select_one('p.text._cs_fortune_text')
             
         if fortune_text:
             return fortune_text.get_text().strip()
         else:
-            return "운세 텍스트를 찾지 못했습니다. 네이버가 데이터를 자바스크립트로 숨겼을 가능성이 큽니다."
+            logging.error(f"HTML 구조 변경 감지: {url}")
+            return "운세 정보를 찾을 수 없습니다. (네이버 페이지 구조 변경 가능성)"
             
     except Exception as e:
+        logging.error(f"에러 발생: {e}")
         return f"연결 오류: {e}"
 
 
